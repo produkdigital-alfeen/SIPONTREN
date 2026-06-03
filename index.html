@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Absensi Santri</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#059669', // Emerald 600
+                        primary_hover: '#047857', // Emerald 700
+                        dark: '#111827',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-gray-800 h-screen flex overflow-hidden selection:bg-primary selection:text-white">
+
+    <aside class="bg-dark text-white w-64 flex-shrink-0 flex flex-col h-full absolute md:relative z-30 transition-transform duration-300 -translate-x-full md:translate-x-0" id="sidebar">
+        <div class="p-6 flex items-center justify-between border-b border-gray-800">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-book-quran text-primary text-2xl"></i>
+                <span class="font-bold text-lg tracking-wider">SIPONTREN</span>
+            </div>
+            <button class="md:hidden text-gray-400 hover:text-white" onclick="toggleSidebar()"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto p-4 space-y-1">
+            <div class="mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Menu Utama</div>
+            <a href="#" onclick="switchTab('dashboard')" class="nav-link active block p-3 rounded-lg flex items-center transition-colors bg-primary text-white" data-tab="dashboard"><i class="fas fa-home w-6 text-center"></i> <span>Dashboard</span></a>
+            <a href="#" onclick="switchTab('santri')" class="nav-link block p-3 rounded-lg flex items-center transition-colors text-gray-400 hover:text-white hover:bg-white/10" data-tab="santri"><i class="fas fa-users w-6 text-center"></i> <span>Data Santri</span></a>
+            <a href="#" onclick="switchTab('jadwal')" class="nav-link block p-3 rounded-lg flex items-center transition-colors text-gray-400 hover:text-white hover:bg-white/10" data-tab="jadwal"><i class="fas fa-calendar-alt w-6 text-center"></i> <span>Jadwal Kegiatan</span></a>
+            
+            <div class="mt-8 mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Aktivitas</div>
+            <a href="#" onclick="switchTab('absensi')" class="nav-link block p-3 rounded-lg flex items-center transition-colors text-gray-400 hover:text-white hover:bg-white/10" data-tab="absensi"><i class="fas fa-qrcode w-6 text-center"></i> <span>Scan Absensi</span></a>
+            <a href="#" onclick="switchTab('hafalan')" class="nav-link block p-3 rounded-lg flex items-center transition-colors text-gray-400 hover:text-white hover:bg-white/10" data-tab="hafalan"><i class="fas fa-award w-6 text-center"></i> <span>Setor Hafalan</span></a>
+            
+            <div class="mt-8 mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sistem</div>
+            <a href="#" onclick="switchTab('pengaturan')" class="nav-link block p-3 rounded-lg flex items-center transition-colors text-gray-400 hover:text-white hover:bg-white/10" data-tab="pengaturan"><i class="fas fa-cog w-6 text-center"></i> <span>Pengaturan</span></a>
+        </nav>
+    </aside>
+
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+    <main class="flex-1 overflow-y-auto relative flex flex-col h-full">
+        <!-- Header -->
+        <header class="bg-white border-b sticky top-0 z-10 flex justify-between items-center p-4 shadow-sm">
+            <button id="mobileMenuBtn" onclick="toggleSidebar()" class="md:hidden text-gray-500 hover:text-dark text-xl"><i class="fas fa-bars"></i></button>
+            <div class="flex items-center gap-3">
+                <div id="headerLogoContainer" class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-sm overflow-hidden">
+                    <i class="fas fa-mosque"></i>
+                </div>
+                <h1 class="font-bold text-lg md:text-xl text-dark" id="headerLembagaName">SANTRI Mujahid Al-Qomariyah</h1>
+            </div>
+            <div class="flex items-center gap-2 md:gap-4">
+                <button onclick="syncToGoogleSheets()" id="btnSyncHeader" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium flex items-center shadow-sm border border-blue-200 transition-colors hidden md:flex">
+                    <i class="fas fa-cloud-upload-alt mr-2"></i> Sync Data
+                </button>
+                <div class="bg-emerald-50 text-primary px-3 py-1.5 rounded-full text-xs md:text-sm font-medium flex items-center shadow-sm border border-emerald-100">
+                    <i class="fas fa-circle text-[8px] mr-2 animate-pulse"></i> Sesi Aktif
+                </div>
+            </div>
+        </header>
+
+        <!-- Container for Tabs -->
+        <div class="p-4 md:p-6 lg:p-8 flex-1 w-full max-w-7xl mx-auto">
+            
+            <div id="tab_dashboard" class="tab-content active">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-2xl font-bold text-dark">Selamat Datang!</h2>
+                    <button onclick="syncToGoogleSheets()" id="btnSyncMobile" class="md:hidden bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center">
+                        <i class="fas fa-sync-alt mr-2"></i> Sync
+                    </button>
+                </div>
+                <p class="text-gray-500 mb-8">Sistem Informasi & Absensi Terpadu Pondok Pesantren.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center justify-between border-l-4 border-l-blue-500">
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium mb-1">Total Santri</p>
+                            <h3 class="text-3xl font-bold text-dark" id="dash_total_santri">0</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-xl"><i class="fas fa-users"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center justify-between border-l-4 border-l-emerald-500">
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium mb-1">Hadir Subuh (Hari Ini)</p>
+                            <h3 class="text-3xl font-bold text-dark" id="dash_hadir_subuh">0</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-xl"><i class="fas fa-sun"></i></div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 flex items-center justify-between border-l-4 border-l-orange-500">
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium mb-1">Hadir Maghrib (Hari Ini)</p>
+                            <h3 class="text-3xl font-bold text-dark" id="dash_hadir_maghrib">0</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center text-xl"><i class="fas fa-moon"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB SANTRI -->
+            <div id="tab_santri" class="tab-content">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <h2 class="text-2xl font-bold text-dark">Data Santri</h2>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                            <h3 class="font-bold text-lg border-b pb-3 mb-4">Tambah Santri Baru</h3>
+                            <form id="formTambahSantri" onsubmit="tambahSantri(event)">
+                                <div class="space-y-4 text-sm">
+                                    <div><label class="block text-gray-600 mb-1">ID Santri</label><input type="text" id="s_id" class="w-full border rounded-lg p-2 bg-gray-50" readonly></div>
+                                    <div><label class="block text-gray-600 mb-1">Nama Lengkap</label><input type="text" id="s_nama" class="w-full border focus:ring-2 focus:ring-primary outline-none rounded-lg p-2" required></div>
+                                    <div><label class="block text-gray-600 mb-1">Jenis Kelamin</label><select id="s_jk" class="w-full border focus:ring-2 focus:ring-primary outline-none rounded-lg p-2" required><option value="L">Laki-laki</option><option value="P">Perempuan</option></select></div>
+                                    <div><label class="block text-gray-600 mb-1">Kelas/Tingkat</label><select id="s_kelas" class="w-full border focus:ring-2 focus:ring-primary outline-none rounded-lg p-2" required><option value="Ula">Ula (Dasar)</option><option value="Wustha">Wustha (Menengah)</option><option value="Ulya">Ulya (Atas)</option></select></div>
+                                    <div><label class="block text-gray-600 mb-1">No. WhatsApp Orang Tua</label><input type="tel" id="s_hp" class="w-full border focus:ring-2 focus:ring-primary outline-none rounded-lg p-2" placeholder="08..." required></div>
+                                    <button type="submit" class="w-full bg-primary hover:bg-primary_hover text-white py-2.5 rounded-lg font-medium transition-colors shadow-md mt-2">Simpan Data</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead><tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b"><th class="p-4 font-semibold">ID & Nama</th><th class="p-4 font-semibold">Kelas</th><th class="p-4 font-semibold">Kontak Wali</th><th class="p-4 font-semibold text-center">QR Code</th></tr></thead>
+                                    <tbody id="tableSantri" class="text-sm divide-y divide-gray-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB JADWAL -->
+            <div id="tab_jadwal" class="tab-content">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <h2 class="text-2xl font-bold text-dark">Jadwal Kegiatan Harian</h2>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                            <h3 class="font-bold text-lg border-b pb-3 mb-4" id="formJadwalTitle">Tambah Jadwal Baru</h3>
+                            <form id="formJadwal" onsubmit="simpanJadwal(event)">
+                                <input type="hidden" id="j_id">
+                                <div class="space-y-4 text-sm">
+                                    <div><label class="block text-gray-600 mb-1">Waktu (Mulai - Selesai)</label><input type="text" id="j_waktu" class="w-full border focus:ring-2 focus:ring-primary outline-none rounded-lg p-2" placeholder="Contoh: 04:30 - 05:30" required></div>
+                                    <div><label class="block text-gray-600 mb-1">Kegiatan</label><input type="text" id="j_kegiatan" class="w-full border focus:ring-2 focus:ring-primary outline-none rounded-lg p-2" placeholder="Sholat Subuh & Ngaji Pagi" required></div>
+                                    <div><label class="block text-gray-600 mb-1">Keterangan</label><input type="text" id="j_keterangan" class="w-full border focus:ring-2 focus:ring-primary outline-none rounded-lg p-2" placeholder="Wajib bagi seluruh santri"></div>
+                                    <div class="flex gap-2 mt-2">
+                                        <button type="submit" id="btnSimpanJadwal" class="flex-1 bg-primary hover:bg-primary_hover text-white py-2.5 rounded-lg font-medium transition-colors shadow-md">Simpan</button>
+                                        <button type="button" id="btnBatalJadwal" onclick="batalEditJadwal()" class="hidden flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2.5 rounded-lg font-medium transition-colors shadow-md">Batal</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead><tr class="bg-emerald-50 text-emerald-800 text-sm border-b border-emerald-100"><th class="p-4 font-bold">Waktu</th><th class="p-4 font-bold">Kegiatan</th><th class="p-4 font-bold">Keterangan</th><th class="p-4 font-bold text-center">Aksi</th></tr></thead>
+                                    <tbody id="tableJadwal" class="text-sm divide-y divide-gray-100">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB ABSENSI -->
+            <div id="tab_absensi" class="tab-content">
+                <h2 class="text-2xl font-bold text-dark mb-6">Scanner Absensi</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-xl shadow-md border-t-4 border-t-primary p-6 text-center">
+                            <div class="w-16 h-16 bg-emerald-100 text-primary rounded-full flex items-center justify-center text-2xl mx-auto mb-4"><i class="fas fa-qrcode"></i></div>
+                            <h3 class="font-bold text-lg mb-1">Simulator Scanner</h3>
+                            <p class="text-xs text-gray-500 mb-6">Pilih nama santri untuk mensimulasikan hasil scan QR Code.</p>
+                            
+                            <form onsubmit="scanAbsensi(event)" class="text-left space-y-4">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Pilih Sesi</label><select id="scan_sesi" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-primary outline-none"><option value="Subuh">Subuh (Pagi)</option><option value="Maghrib">Maghrib (Malam)</option></select></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Santri yang di-scan</label><select id="scan_santri" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-primary outline-none" required></select></div>
+                                <button type="submit" class="w-full bg-dark hover:bg-black text-white py-3 rounded-lg font-bold flex justify-center items-center gap-2 shadow-lg transition-transform active:scale-95"><i class="fas fa-camera"></i> SCAN SEKARANG</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div class="p-4 border-b bg-gray-50 flex justify-between items-center"><h3 class="font-bold text-dark"><i class="fas fa-history text-gray-400 mr-2"></i>Riwayat Kehadiran Hari Ini</h3></div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead><tr class="text-gray-500 uppercase text-xs border-b"><th class="p-4 font-semibold">Waktu & Sesi</th><th class="p-4 font-semibold">Nama Santri</th><th class="p-4 font-semibold">Status</th></tr></thead>
+                                    <tbody id="tableAbsensi" class="divide-y divide-gray-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB HAFALAN -->
+            <div id="tab_hafalan" class="tab-content">
+                <h2 class="text-2xl font-bold text-dark mb-6">Setor Hafalan</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                            <form onsubmit="simpanHafalan(event)">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Nama Santri</label><select id="h_santri" class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-primary" required></select></div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                                        <select id="h_kategori" onchange="updateFormHafalan()" class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-primary">
+                                            <option value="Al-Qur'an">Al-Qur'an</option><option value="Hadits">Hadits</option><option value="Do'a">Do'a Harian</option>
+                                        </select>
+                                    </div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">Nama Penyimak</label><input type="text" id="h_penyimak" placeholder="Ust. / Ustz." class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-primary" required></div>
+                                </div>
+                                <div id="quran_fields" class="bg-emerald-50/50 p-4 rounded-lg border border-emerald-100 mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div><label class="block text-sm font-medium text-emerald-800 mb-1">Juz</label><select id="h_juz" class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-primary text-sm"></select></div>
+                                    <div><label class="block text-sm font-medium text-emerald-800 mb-1">Surat</label><select id="h_surat" class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-primary text-sm"></select></div>
+                                    <div class="md:col-span-2 flex gap-4"><div class="flex-1"><label class="block text-sm font-medium text-emerald-800 mb-1">Ayat Ke-</label><input type="text" id="h_ayat" placeholder="Contoh: 1-10" class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-primary text-sm"></div><div class="w-1/3"><label class="block text-sm font-medium text-emerald-800 mb-1">Total Ayat</label><input type="number" id="h_jumlah_quran" placeholder="10" class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-primary text-sm" required></div></div>
+                                </div>
+                                <div id="non_quran_fields" class="hidden bg-blue-50/50 p-4 rounded-lg border border-blue-100 mb-4 space-y-4">
+                                    <div><label class="block text-sm font-medium text-blue-800 mb-1">Judul / Materi Hafalan</label><input type="text" id="h_judul" placeholder="Contoh: Doa Masuk Masjid / Hadits Niat" class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm"></div>
+                                    <div><label class="block text-sm font-medium text-blue-800 mb-1">Jumlah Baris/Halaman</label><input type="number" id="h_jumlah_non" placeholder="1" class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500 text-sm"></div>
+                                </div>
+                                <div class="mb-6"><label class="block text-sm font-medium text-gray-700 mb-1">Kualitas Hafalan (Nilai)</label><select id="h_nilai" class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-primary"><option value="Mumtaz (Sangat Lancar)">Mumtaz (Sangat Lancar)</option><option value="Jayyid Jiddan (Lancar)">Jayyid Jiddan (Lancar)</option><option value="Jayyid (Cukup)">Jayyid (Cukup)</option><option value="Maqbul (Perlu Diulang)">Maqbul (Perlu Diulang)</option></select></div>
+                                <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg font-bold shadow-md hover:bg-primary_hover transition-colors"><i class="fas fa-save mr-2"></i> Simpan Setoran</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2 flex flex-col gap-6">
+                        <div class="bg-gradient-to-br from-emerald-600 to-primary text-white rounded-xl shadow-md p-5">
+                            <h3 class="font-bold flex items-center mb-4"><i class="fas fa-trophy text-yellow-300 mr-2 text-xl"></i> Papan Peringkat (Rekap Al-Qur'an)</h3>
+                            <div class="bg-white/10 rounded-lg p-2 backdrop-blur-sm divide-y divide-white/20 max-h-48 overflow-y-auto" id="rekapHafalanContainer"></div>
+                        </div>
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex-1 flex flex-col overflow-hidden">
+                            <div class="p-4 border-b bg-gray-50"><h3 class="font-bold text-dark text-sm">Riwayat Setoran Terbaru</h3></div>
+                            <div class="overflow-x-auto flex-1">
+                                <table class="w-full text-left text-sm"><tbody id="tableHafalan" class="divide-y divide-gray-100"></tbody></table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB PENGATURAN -->
+            <div id="tab_pengaturan" class="tab-content">
+                <h2 class="text-2xl font-bold text-dark mb-6">Pengaturan Sistem</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Identitas Lembaga -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 class="text-lg font-bold text-dark mb-4 border-b pb-2"><i class="fas fa-building text-primary mr-2"></i>Identitas Lembaga</h3>
+                        <form id="formIdentitas" onsubmit="savePengaturanLembaga(event)">
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lembaga / Instansi</label>
+                                <input type="text" id="setting_nama_lembaga" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Logo</label>
+                                <select id="setting_tipe_logo" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none" onchange="toggleLogoInput()">
+                                    <option value="icon">Gunakan Ikon Default (Masjid)</option>
+                                    <option value="url">Gunakan Gambar Logo Sendiri (URL)</option>
+                                </select>
+                            </div>
+                            <div id="logoUrlContainer" class="mb-6 hidden">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">URL Gambar Logo</label>
+                                <input type="url" id="setting_url_logo" placeholder="https://contoh.com/logo.png" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm">
+                            </div>
+                            <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-dark transition-colors shadow-md">Simpan Identitas</button>
+                        </form>
+                    </div>
+
+                    <!-- Integrasi Database (NEW) -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <h3 class="text-lg font-bold text-dark mb-4 border-b pb-2"><i class="fas fa-database text-blue-500 mr-2"></i>Integrasi Google Sheets</h3>
+                        <div class="mb-4">
+                            <p class="text-xs text-gray-500 mb-4">Hubungkan aplikasi ini dengan Google Sheets menggunakan Web App URL dari Google Apps Script agar data tersimpan di awan (cloud).</p>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">URL Web App (Google Apps Script)</label>
+                            <input type="url" id="setting_gas_url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none mb-2 text-sm">
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="saveGasUrl()" class="flex-1 bg-gray-800 text-white py-2 rounded-lg font-medium hover:bg-black transition-colors shadow-md text-sm">Simpan URL</button>
+                            <button onclick="syncToGoogleSheets()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md text-sm flex items-center justify-center">
+                                <i class="fas fa-sync-alt mr-2"></i> Sync Data
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Reset Data -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-center items-center text-center md:col-span-2">
+                        <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-500 mb-2 text-xl"><i class="fas fa-trash-alt"></i></div>
+                        <h3 class="font-bold text-dark mb-1">Manajemen Data Lokal</h3>
+                        <p class="text-xs text-gray-500 mb-4">Menghapus seluruh cache data di browser perangkat ini.</p>
+                        <button onclick="clearAllData()" class="px-4 py-2 bg-white text-red-600 rounded-lg border border-red-200 hover:bg-red-50 text-xs font-bold shadow-sm">Hapus Semua Data Lokal</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modals & Toasts (Sama seperti sebelumnya) -->
+    <div id="qrModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-xs text-center transform transition-all scale-95" id="qrModalContent">
+            <h3 class="font-bold text-lg mb-1" id="qrModalTitle">ID</h3><p class="text-sm text-gray-500 mb-4" id="qrModalSubtitle">Nama</p>
+            <div id="qrcodeDisplay" class="flex justify-center mb-6 p-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50"></div>
+            <div class="flex gap-2"><button onclick="closeQrModal()" class="flex-1 py-2 bg-gray-100 rounded-md text-sm font-medium hover:bg-gray-200">Tutup</button><button onclick="window.print()" class="flex-1 py-2 bg-primary text-white rounded-md text-sm font-medium">Cetak</button></div>
+        </div>
+    </div>
+    
+    <div id="sertifikatModal" class="fixed inset-0 bg-dark/80 z-50 hidden flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl p-2 md:p-4 w-full max-w-2xl transform transition-transform duration-300 scale-95" id="sertifikatModalContent">
+            <button onclick="closeSertifikatModal()" class="absolute -top-3 -right-3 md:top-4 md:right-4 w-8 h-8 bg-white md:bg-transparent rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 z-20"><i class="fas fa-times"></i></button>
+            <div id="sertifikatCanvas" class="bg-white p-8 md:p-12 border-[12px] border-emerald-50 rounded-lg relative overflow-hidden" style="background-image: radial-gradient(#10b98111 1px, transparent 1px); background-size: 20px 20px;">
+                <div class="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-primary rounded-tl-sm m-4"></div><div class="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-primary rounded-tr-sm m-4"></div>
+                <div class="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 border-primary rounded-bl-sm m-4"></div><div class="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-primary rounded-br-sm m-4"></div>
+                <div class="text-center mb-6 relative z-10">
+                    <div id="certLogoContainer" class="w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-md overflow-hidden"><i class="fas fa-mosque text-3xl"></i></div>
+                    <h2 class="font-bold text-2xl md:text-3xl text-dark uppercase tracking-widest mb-1">Syahadah Tahfidz</h2>
+                    <p id="certLembagaName" class="text-emerald-600 font-medium tracking-wide">LEMBAGA NAMA</p>
+                </div>
+                <div class="text-center relative z-10 mb-8 mt-6">
+                    <p class="text-gray-600 mb-2 text-sm uppercase tracking-wide">Diberikan Sebagai Penghargaan Kepada:</p>
+                    <h3 id="certNama" class="text-2xl md:text-3xl font-bold text-gray-800 border-b-2 border-dashed border-emerald-300 inline-block px-8 pb-2 mb-6">Nama Santri</h3>
+                    <p class="text-gray-600 mb-3">Telah menyetorkan hafalan <span id="certKategori" class="font-bold text-primary">Al-Qur'an</span>:</p>
+                    <div class="bg-emerald-50 py-4 px-6 md:px-8 rounded-xl border border-emerald-100 inline-block min-w-[80%] md:min-w-[300px] shadow-sm">
+                        <p id="certCapaian" class="text-lg md:text-2xl font-bold text-dark leading-tight">Detail Capaian</p>
+                        <p id="certNilai" class="text-sm font-bold text-primary mt-2 px-3 py-1 bg-white rounded-full inline-block shadow-sm">Nilai: Mumtaz</p>
+                    </div>
+                </div>
+                <div class="flex justify-between items-end relative z-10 px-2 md:px-12 mt-8">
+                    <div class="text-center"><p class="text-[10px] md:text-xs text-gray-500 mb-1">Ditetapkan pada:</p><p id="certTanggal" class="text-xs md:text-sm font-medium text-gray-700">Tanggal</p></div>
+                    <div class="text-center"><p class="text-[10px] md:text-xs text-gray-500 mb-6 md:mb-8">Penyimak / Ustaz(ah)</p><p id="certPenyimak" class="font-bold text-gray-800 border-b border-gray-400 inline-block px-4 pb-1 text-sm md:text-base">Nama Ustaz</p></div>
+                </div>
+            </div>
+            <div class="flex justify-center mt-4 md:mt-6"><button onclick="downloadSertifikatImage(event)" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 w-full flex items-center justify-center text-sm md:text-base shadow-md"><i class="fas fa-download mr-2"></i> Download Medsos (PNG)</button></div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-4 right-4 bg-white border border-gray-100 shadow-xl rounded-lg p-4 flex items-start gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50 w-80">
+        <div id="toastIcon" class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"></div>
+        <div><h4 id="toastTitle" class="font-bold text-sm text-gray-800">Title</h4><p id="toastMessage" class="text-xs text-gray-500 mt-1">Message</p></div>
+    </div>
+
+    <script>
+        const surats = ["Al-Fatihah", "Al-Baqarah", "Ali 'Imran", "An-Nisa'", "Al-Ma'idah", "Al-An'am", "Al-A'raf", "Al-Anfal", "At-Taubah", "Yunus", "Hud", "Yusuf", "Ar-Ra'd", "Ibrahim", "Al-Hijr", "An-Nahl", "Al-Isra'", "Al-Kahf", "Maryam", "Ta Ha", "Al-Anbiya'", "Al-Hajj", "Al-Mu'minun", "An-Nur", "Al-Furqan", "Asy-Syu'ara'", "An-Naml", "Al-Qasas", "Al-'Ankabut", "Ar-Rum", "Luqman", "As-Sajdah", "Al-Ahzab", "Saba'", "Fatir", "Ya Sin", "As-Saffat", "Sad", "Az-Zumar", "Ghafir", "Fussilat", "Asy-Syura", "Az-Zukhruf", "Ad-Dukhan", "Al-Jasiyah", "Al-Ahqaf", "Muhammad", "Al-Fath", "Al-Hujurat", "Qaf", "Az-Zariyat", "At-Tur", "An-Najm", "Al-Qamar", "Ar-Rahman", "Al-Waqi'ah", "Al-Hadid", "Al-Mujadilah", "Al-Hasyr", "Al-Mumtahanah", "As-Saff", "Al-Jumu'ah", "Al-Munafiqun", "At-Tagabun", "At-Talaq", "At-Tahrim", "Al-Mulk", "Al-Qalam", "Al-Haqqah", "Al-Ma'arij", "Nuh", "Al-Jinn", "Al-Muzzammil", "Al-Muddassir", "Al-Qiyamah", "Al-Insan", "Al-Mursalat", "An-Naba'", "An-Nazi'at", "'Abasa", "At-Takwir", "Al-Infitar", "Al-Mutaffifin", "Al-Insyiqaq", "Al-Buruj", "At-Tariq", "Al-A'la", "Al-Gasyiyah", "Al-Fajr", "Al-Balad", "Asy-Syams", "Al-Lail", "Ad-Duha", "Asy-Syarh", "At-Tin", "Al-'Alaq", "Al-Qadr", "Al-Bayyinah", "Az-Zalzalah", "Al-'Adiyat", "Al-Qari'ah", "At-Takasur", "Al-'Asr", "Al-Humazah", "Al-Fil", "Quraisy", "Al-Ma'un", "Al-Kausar", "Al-Kafirun", "An-Nasr", "Al-Lahab", "Al-Ikhlas", "Al-Falaq", "An-Nas"];
+
+        let db = {
+            santri: JSON.parse(localStorage.getItem('smq_santri')) || [],
+            absensi: JSON.parse(localStorage.getItem('smq_absensi')) || [],
+            hafalan: JSON.parse(localStorage.getItem('smq_hafalan')) || [],
+            jadwal: JSON.parse(localStorage.getItem('smq_jadwal')) || [
+                { id: 'jdw_1', waktu: '04:30 - 05:30', kegiatan: 'Sholat Subuh & Ngaji Pagi', keterangan: 'Wajib bagi seluruh santri' },
+                { id: 'jdw_2', waktu: '18:00 - 19:30', kegiatan: 'Sholat Maghrib & Ngaji Malam', keterangan: 'Dilanjutkan setoran hafalan' }
+            ],
+            settings: JSON.parse(localStorage.getItem('smq_settings')) || {
+                namaLembaga: 'SANTRI Mujahid Al-Qomariyah', tipeLogo: 'icon', urlLogo: '', gasUrl: ''
+            }
+        };
+
+        function saveDb() {
+            localStorage.setItem('smq_santri', JSON.stringify(db.santri));
+            localStorage.setItem('smq_absensi', JSON.stringify(db.absensi));
+            localStorage.setItem('smq_hafalan', JSON.stringify(db.hafalan));
+            localStorage.setItem('smq_jadwal', JSON.stringify(db.jadwal));
+            localStorage.setItem('smq_settings', JSON.stringify(db.settings));
+        }
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); document.getElementById('sidebarOverlay').classList.toggle('hidden'); }
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => { el.classList.remove('active'); setTimeout(() => el.style.display = 'none', 50); });
+            document.querySelectorAll('.nav-link').forEach(el => { el.classList.remove('bg-primary', 'text-white', 'active'); el.classList.add('text-gray-400'); });
+            setTimeout(() => { document.getElementById('tab_' + tabId).style.display = 'block'; setTimeout(() => document.getElementById('tab_' + tabId).classList.add('active'), 10); }, 50);
+            document.querySelector(`.nav-link[data-tab="${tabId}"]`).classList.add('bg-primary', 'text-white', 'active');
+            document.querySelector(`.nav-link[data-tab="${tabId}"]`).classList.remove('text-gray-400');
+            if(window.innerWidth < 768) toggleSidebar();
+        }
+
+        function showToast(title, msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastTitle').innerText = title; document.getElementById('toastMessage').innerText = msg;
+            const icon = document.getElementById('toastIcon');
+            if(type === 'success') { icon.className = 'w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-green-100 text-green-600'; icon.innerHTML = '<i class="fas fa-check"></i>'; }
+            else if(type === 'wa') { icon.className = 'w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-green-500 text-white'; icon.innerHTML = '<i class="fab fa-whatsapp"></i>'; }
+            else { icon.className = 'w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-red-100 text-red-600'; icon.innerHTML = '<i class="fas fa-exclamation"></i>'; }
+            toast.classList.remove('translate-y-20', 'opacity-0'); setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 4000);
+        }
+
+        function updateDashboard() {
+            document.getElementById('dash_total_santri').innerText = db.santri.length;
+            const today = new Date().toDateString();
+            const hadirHariIni = db.absensi.filter(a => new Date(a.waktu).toDateString() === today);
+            document.getElementById('dash_hadir_subuh').innerText = hadirHariIni.filter(a => a.sesi === 'Subuh').length;
+            document.getElementById('dash_hadir_maghrib').innerText = hadirHariIni.filter(a => a.sesi === 'Maghrib').length;
+        }
+
+        function generateIdSantri() { document.getElementById('s_id').value = `SMQ-${Math.floor(1000 + Math.random() * 9000)}`; }
+
+        function updateTabelSantri() {
+            const tbody = document.getElementById('tableSantri'); tbody.innerHTML = '';
+            const selScan = document.getElementById('scan_santri'); const selHaf = document.getElementById('h_santri');
+            selScan.innerHTML = '<option value="">-- Pilih Santri --</option>'; selHaf.innerHTML = '<option value="">-- Pilih Santri --</option>';
+            db.santri.forEach(s => {
+                selScan.innerHTML += `<option value="${s.id}">${s.nama} (${s.id})</option>`; selHaf.innerHTML += `<option value="${s.id}">${s.nama}</option>`;
+                tbody.innerHTML += `<tr><td class="p-4"><div class="font-bold text-dark">${s.nama}</div><div class="text-xs text-gray-500">${s.id} • ${s.jk==='L'?'Laki-laki':'Perempuan'}</div></td><td class="p-4"><span class="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-md border border-blue-100">${s.kelas}</span></td><td class="p-4"><div class="text-xs text-gray-500"><i class="fab fa-whatsapp text-green-500"></i> ${s.hp}</div></td><td class="p-4 text-center"><button onclick="showQrModal('${s.id}')" class="text-primary hover:text-primary_hover bg-emerald-50 p-2 rounded-lg"><i class="fas fa-qrcode text-lg"></i></button></td></tr>`;
+            });
+            generateIdSantri();
+        }
+
+        function tambahSantri(e) {
+            e.preventDefault();
+            db.santri.push({ id: document.getElementById('s_id').value, nama: document.getElementById('s_nama').value, jk: document.getElementById('s_jk').value, kelas: document.getElementById('s_kelas').value, hp: document.getElementById('s_hp').value });
+            saveDb(); updateTabelSantri(); updateDashboard(); e.target.reset(); showToast('Berhasil', 'Data santri ditambahkan');
+        }
+
+        let qrcodeObj = null;
+        function showQrModal(id) {
+            const s = db.santri.find(x => x.id === id); document.getElementById('qrModalTitle').innerText = s.id; document.getElementById('qrModalSubtitle').innerText = s.nama;
+            const qc = document.getElementById('qrcodeDisplay'); qc.innerHTML = ''; new QRCode(qc, { text: s.id, width: 150, height: 150 });
+            document.getElementById('qrModal').classList.remove('hidden'); setTimeout(() => document.getElementById('qrModalContent').classList.remove('scale-95'), 10);
+        }
+        function closeQrModal() { document.getElementById('qrModalContent').classList.add('scale-95'); setTimeout(() => document.getElementById('qrModal').classList.add('hidden'), 200); }
+
+        function updateTabelJadwal() {
+            const tbody = document.getElementById('tableJadwal'); tbody.innerHTML = '';
+            db.jadwal.forEach(j => {
+                tbody.innerHTML += `<tr>
+                    <td class="p-4 font-semibold text-dark whitespace-nowrap">${j.waktu}</td>
+                    <td class="p-4 font-medium">${j.kegiatan}</td>
+                    <td class="p-4 text-gray-500 text-xs md:text-sm">${j.keterangan || '-'}</td>
+                    <td class="p-4 text-center whitespace-nowrap">
+                        <button onclick="editJadwal('${j.id}')" class="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button onclick="hapusJadwal('${j.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors ml-1" title="Hapus"><i class="fas fa-trash-alt"></i></button>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        function simpanJadwal(e) {
+            e.preventDefault();
+            const id = document.getElementById('j_id').value;
+            const waktu = document.getElementById('j_waktu').value;
+            const kegiatan = document.getElementById('j_kegiatan').value;
+            const keterangan = document.getElementById('j_keterangan').value;
+
+            if (id) {
+                const index = db.jadwal.findIndex(j => j.id === id);
+                if (index > -1) { db.jadwal[index] = { id, waktu, kegiatan, keterangan }; }
+                showToast('Diperbarui', 'Jadwal berhasil diupdate');
+            } else {
+                db.jadwal.push({ id: 'jdw_' + Date.now(), waktu, kegiatan, keterangan });
+                showToast('Ditambahkan', 'Jadwal baru tersimpan');
+            }
+            saveDb(); updateTabelJadwal(); batalEditJadwal();
+        }
+
+        function editJadwal(id) {
+            const j = db.jadwal.find(x => x.id === id);
+            if(j) {
+                document.getElementById('j_id').value = j.id;
+                document.getElementById('j_waktu').value = j.waktu;
+                document.getElementById('j_kegiatan').value = j.kegiatan;
+                document.getElementById('j_keterangan').value = j.keterangan;
+                document.getElementById('formJadwalTitle').innerText = 'Edit Jadwal';
+                document.getElementById('btnSimpanJadwal').innerText = 'Update Data';
+                document.getElementById('btnBatalJadwal').classList.remove('hidden');
+                
+                // Scroll ke form jika di mobile
+                if(window.innerWidth < 1024) { document.getElementById('formJadwalTitle').scrollIntoView({behavior: 'smooth'}); }
+            }
+        }
+
+        function batalEditJadwal() {
+            document.getElementById('formJadwal').reset();
+            document.getElementById('j_id').value = '';
+            document.getElementById('formJadwalTitle').innerText = 'Tambah Jadwal Baru';
+            document.getElementById('btnSimpanJadwal').innerText = 'Simpan';
+            document.getElementById('btnBatalJadwal').classList.add('hidden');
+        }
+
+        function hapusJadwal(id) {
+            if(confirm('Yakin ingin menghapus jadwal ini?')) {
+                db.jadwal = db.jadwal.filter(j => j.id !== id);
+                saveDb(); updateTabelJadwal(); showToast('Dihapus', 'Jadwal telah dihapus', 'wa');
+            }
+        }
+
+        function updateTabelAbsensi() {
+            const tbody = document.getElementById('tableAbsensi'); tbody.innerHTML = '';
+            [...db.absensi].sort((a,b) => new Date(b.waktu) - new Date(a.waktu)).slice(0, 20).forEach(a => {
+                const timeStr = new Date(a.waktu).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                tbody.innerHTML += `<tr><td class="p-4"><div class="text-xs text-gray-500">${new Date(a.waktu).toLocaleDateString('id-ID')}</div><div class="font-medium text-dark">${timeStr} WIB</div><div class="text-[10px] mt-1 text-gray-500">${a.sesi}</div></td><td class="p-4"><div class="font-bold text-dark">${a.namaSantri}</div></td><td class="p-4"><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold shadow-sm">HADIR</span></td></tr>`;
+            });
+        }
+
+        function scanAbsensi(e) {
+            e.preventDefault(); const s = db.santri.find(x => x.id === document.getElementById('scan_santri').value); if(!s) return;
+            db.absensi.push({ waktu: new Date().toISOString(), idSantri: s.id, namaSantri: s.nama, sesi: document.getElementById('scan_sesi').value });
+            saveDb(); updateTabelAbsensi(); updateDashboard(); showToast('Scan Berhasil', `Absensi ${s.nama} tersimpan. Simulasi pesan WA terkirim.`, 'wa');
+        }
+
+        function initHafalanForm() {
+            const juzSel = document.getElementById('h_juz'); for(let i=1; i<=30; i++) juzSel.innerHTML += `<option value="${i}">Juz ${i}</option>`;
+            const suratSel = document.getElementById('h_surat'); surats.forEach((s, i) => suratSel.innerHTML += `<option value="${s}">${i + 1}. ${s}</option>`);
+            juzSel.value = "30"; suratSel.value = "An-Naba'";
+        }
+
+        function updateFormHafalan() {
+            const k = document.getElementById('h_kategori').value;
+            if(k === "Al-Qur'an") { document.getElementById('quran_fields').classList.remove('hidden'); document.getElementById('non_quran_fields').classList.add('hidden'); } 
+            else { document.getElementById('quran_fields').classList.add('hidden'); document.getElementById('non_quran_fields').classList.remove('hidden'); }
+        }
+
+        function simpanHafalan(e) {
+            e.preventDefault(); const s = db.santri.find(x => x.id === document.getElementById('h_santri').value); const kat = document.getElementById('h_kategori').value;
+            let cap = "", jml = 0;
+            if(kat === "Al-Qur'an") { cap = `Juz ${document.getElementById('h_juz').value}, Surah ${document.getElementById('h_surat').value} ${document.getElementById('h_ayat').value ? 'Ayat '+document.getElementById('h_ayat').value : ''}`; jml = parseInt(document.getElementById('h_jumlah_quran').value) || 0; } 
+            else { cap = document.getElementById('h_judul').value; jml = parseInt(document.getElementById('h_jumlah_non').value) || 0; }
+            db.hafalan.push({ idHaf: 'hf_' + Date.now(), waktu: new Date().toISOString(), idSantri: s.id, namaSantri: s.nama, kategori: kat, capaian: cap, jumlah: jml, nilai: document.getElementById('h_nilai').value, penyimak: document.getElementById('h_penyimak').value });
+            saveDb(); updateTabelHafalan(); updateRekapHafalan(); showToast('Tersimpan', 'Setoran hafalan dicatat', 'success');
+        }
+
+        function updateTabelHafalan() {
+            const tbody = document.getElementById('tableHafalan'); tbody.innerHTML = '';
+            [...db.hafalan].sort((a,b) => new Date(b.waktu) - new Date(a.waktu)).slice(0, 15).forEach(h => {
+                const c = h.kategori === "Al-Qur'an" ? 'bg-emerald-100 text-emerald-700' : (h.kategori === 'Hadits' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700');
+                tbody.innerHTML += `<tr><td class="p-3 text-gray-500 text-xs">${new Date(h.waktu).toLocaleDateString('id-ID')}<br>${new Date(h.waktu).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}</td><td class="p-3"><div class="font-medium text-gray-800">${h.namaSantri}</div><span class="${c} text-[10px] px-2 py-0.5 rounded font-medium mt-1 inline-block">${h.kategori}</span></td><td class="p-3"><div class="font-medium text-gray-800 text-xs">${h.capaian}</div><div class="text-[10px] text-gray-500 mt-1">Nilai: <strong>${h.nilai.split(' (')[0]}</strong> • Ust. ${h.penyimak}</div></td><td class="p-3 text-center"><button onclick="showSertifikat('${h.idHaf || h.idSantri+h.waktu}')" class="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded text-xs shadow-sm"><i class="fas fa-award mr-1"></i> Sertifikat</button></td></tr>`;
+            });
+        }
+
+        function updateRekapHafalan() {
+            const c = document.getElementById('rekapHafalanContainer'); c.innerHTML = ''; let rekap = {};
+            db.hafalan.filter(h => h.kategori === "Al-Qur'an").forEach(h => { if(!rekap[h.idSantri]) rekap[h.idSantri] = { nama: h.namaSantri, total: 0 }; rekap[h.idSantri].total += (parseInt(h.jumlah) || 0); });
+            const arr = Object.values(rekap).sort((a,b) => b.total - a.total);
+            if(arr.length === 0) { c.innerHTML = '<div class="text-white/60 text-sm text-center py-4">Belum ada setoran</div>'; return; }
+            arr.forEach((r, i) => {
+                let ri = `<span class="w-6 text-center text-sm font-bold text-white/50 mr-2">#${i+1}</span>`;
+                if(i === 0) ri = `<i class="fas fa-medal text-yellow-300 w-6 text-center mr-2 text-lg drop-shadow-md"></i>`; else if(i === 1) ri = `<i class="fas fa-medal text-gray-300 w-6 text-center mr-2 text-lg drop-shadow-md"></i>`; else if(i === 2) ri = `<i class="fas fa-medal text-orange-400 w-6 text-center mr-2 text-lg drop-shadow-md"></i>`;
+                c.innerHTML += `<div class="flex items-center justify-between p-2.5 hover:bg-white/10 transition-colors"><div class="flex items-center text-white/90">${ri}<span class="font-medium text-sm truncate max-w-[120px]">${r.nama}</span></div><span class="text-xs font-bold bg-white text-emerald-600 px-2 py-1 rounded shadow-sm">${r.total} Ayat</span></div>`;
+            });
+        }
+
+        function showSertifikat(id) {
+            const h = db.hafalan.find(item => item.idHaf === id || (item.idSantri+item.waktu) === id); if(!h) return;
+            document.getElementById('certLembagaName').innerText = db.settings.namaLembaga.toUpperCase(); document.getElementById('certNama').innerText = h.namaSantri; document.getElementById('certKategori').innerText = h.kategori; document.getElementById('certCapaian').innerText = h.capaian; document.getElementById('certNilai').innerText = `Nilai: ${h.nilai.split(' (')[0]}`; document.getElementById('certTanggal').innerText = new Date(h.waktu).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); document.getElementById('certPenyimak').innerText = h.penyimak;
+            document.getElementById('sertifikatModal').classList.remove('hidden'); setTimeout(() => document.getElementById('sertifikatModalContent').classList.remove('scale-95'), 10);
+        }
+        function closeSertifikatModal() { document.getElementById('sertifikatModalContent').classList.add('scale-95'); setTimeout(() => document.getElementById('sertifikatModal').classList.add('hidden'), 300); }
+        function downloadSertifikatImage(e) {
+            const btn = e.currentTarget; const ori = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Proses...'; btn.disabled = true;
+            html2canvas(document.getElementById('sertifikatCanvas'), { scale: 3, backgroundColor: '#ffffff', useCORS: true }).then(c => {
+                const link = document.createElement('a'); link.download = `Syahadah-${document.getElementById('certNama').innerText.replace(/\s+/g, '-')}.png`; link.href = c.toDataURL('image/png'); link.click();
+                btn.innerHTML = ori; btn.disabled = false; showToast('Berhasil', 'Sertifikat diunduh', 'success');
+            });
+        }
+
+        function toggleLogoInput() { document.getElementById('logoUrlContainer').classList.toggle('hidden', document.getElementById('setting_tipe_logo').value !== 'url'); }
+        
+        function savePengaturanLembaga(e) {
+            e.preventDefault();
+            db.settings.namaLembaga = document.getElementById('setting_nama_lembaga').value;
+            db.settings.tipeLogo = document.getElementById('setting_tipe_logo').value;
+            db.settings.urlLogo = document.getElementById('setting_url_logo').value;
+            saveDb(); applyPengaturanUI(); showToast('Tersimpan', 'Identitas lembaga diperbarui.', 'success');
+        }
+
+        function saveGasUrl() {
+            db.settings.gasUrl = document.getElementById('setting_gas_url').value;
+            saveDb(); showToast('Tersimpan', 'URL Google Apps Script berhasil disimpan.', 'success');
+        }
+
+        function applyPengaturanUI() {
+            document.getElementById('headerLembagaName').innerText = db.settings.namaLembaga;
+            let logoHtml = `<i class="fas fa-mosque"></i>`;
+            const headerLC = document.getElementById('headerLogoContainer'); const certLC = document.getElementById('certLogoContainer');
+            if(db.settings.tipeLogo === 'url' && db.settings.urlLogo.trim() !== '') {
+                logoHtml = `<img src="${db.settings.urlLogo}" class="w-full h-full object-cover" crossorigin="anonymous" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'fas fa-mosque text-primary\\'></i>';">`;
+                headerLC.classList.remove('bg-primary', 'text-white'); certLC.classList.remove('bg-primary', 'text-white'); headerLC.classList.add('bg-white'); certLC.classList.add('bg-white');
+            } else {
+                headerLC.classList.add('bg-primary', 'text-white'); certLC.classList.add('bg-primary', 'text-white'); headerLC.classList.remove('bg-white'); certLC.classList.remove('bg-white');
+            }
+            headerLC.innerHTML = logoHtml; certLC.innerHTML = logoHtml;
+            document.getElementById('setting_nama_lembaga').value = db.settings.namaLembaga; document.getElementById('setting_tipe_logo').value = db.settings.tipeLogo; document.getElementById('setting_url_logo').value = db.settings.urlLogo; document.getElementById('setting_gas_url').value = db.settings.gasUrl || '';
+            toggleLogoInput();
+        }
+
+        function clearAllData() { if(confirm("PERHATIAN!\n\nAnda yakin ingin menghapus SEMUA data lokal?")) { localStorage.clear(); location.reload(); } }
+
+        // --- GOOGLE SHEETS SYNC LOGIC ---
+        async function syncToGoogleSheets() {
+            if(!db.settings.gasUrl) {
+                switchTab('pengaturan');
+                return showToast('Gagal Sync', 'Isi URL Web App Google Apps Script terlebih dahulu di menu Pengaturan!', 'error');
+            }
+
+            const btnMobile = document.getElementById('btnSyncMobile');
+            const btnHeader = document.getElementById('btnSyncHeader');
+            const oriHtmlM = btnMobile.innerHTML; const oriHtmlH = btnHeader.innerHTML;
+            
+            btnMobile.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btnHeader.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Menyinkronkan...';
+
+            try {
+                // Mengirim seluruh state db lokal ke server Google Sheets untuk ditimpa/update
+                const payload = JSON.stringify({ action: 'sync', data: db });
+                
+                await fetch(db.settings.gasUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Menggunakan text/plain untuk menghindari issue CORS preflight di GAS
+                    body: payload
+                });
+
+                showToast('Sync Sukses', 'Semua data telah disinkronkan ke Google Spreadsheet Anda.', 'success');
+            } catch(error) {
+                console.error(error);
+                showToast('Sync Gagal', 'Pastikan URL valid dan internet stabil. Lihat console untuk detail.', 'error');
+            } finally {
+                btnMobile.innerHTML = oriHtmlM;
+                btnHeader.innerHTML = oriHtmlH;
+            }
+        }
+
+        function init() { initHafalanForm(); updateTabelSantri(); updateTabelJadwal(); updateTabelAbsensi(); updateTabelHafalan(); updateRekapHafalan(); updateDashboard(); applyPengaturanUI(); }
+        window.onload = init;
+    </script>
+</body>
+</html>
