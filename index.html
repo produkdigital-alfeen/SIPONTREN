@@ -37,6 +37,15 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Print Styles for Raport */
+        @media print {
+            body * { visibility: hidden; }
+            #raportModal { position: absolute; left: 0; top: 0; width: 100%; background: white !important; }
+            #raportPrintArea, #raportPrintArea * { visibility: visible; }
+            #raportPrintArea { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; margin: 0; padding: 0; }
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-gray-800 h-screen flex overflow-hidden selection:bg-primary selection:text-white">
@@ -51,16 +60,19 @@
         </div>
         
         <nav class="flex-1 overflow-y-auto p-4 space-y-1">
-            <div class="mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Menu Utama</div>
+            <div class="mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2">Menu Utama</div>
             <a href="#" onclick="switchTab('dashboard')" class="nav-link active block p-3 rounded-lg flex items-center transition-colors bg-primary text-white" data-tab="dashboard"><i class="fas fa-home w-6 text-center"></i> <span>Dashboard</span></a>
             <a href="#" onclick="switchTab('santri')" class="nav-link block p-3 rounded-lg flex items-center transition-colors text-gray-400 hover:text-white hover:bg-white/10" data-tab="santri"><i class="fas fa-users w-6 text-center"></i> <span>Data Santri</span></a>
             <a href="#" onclick="switchTab('jadwal')" class="nav-link block p-3 rounded-lg flex items-center transition-colors text-gray-400 hover:text-white hover:bg-white/10" data-tab="jadwal"><i class="fas fa-calendar-alt w-6 text-center"></i> <span>Jadwal Kegiatan</span></a>
             
-            <div class="mt-8 mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Aktivitas</div>
+            <div class="mt-6 mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Aktivitas</div>
             <a href="#" onclick="switchTab('absensi')" class="nav-link block p-3 rounded-lg flex items-center transition-colors text-gray-400 hover:text-white hover:bg-white/10" data-tab="absensi"><i class="fas fa-qrcode w-6 text-center"></i> <span>Scan Absensi</span></a>
             <a href="#" onclick="switchTab('hafalan')" class="nav-link block p-3 rounded-lg flex items-center transition-colors text-gray-400 hover:text-white hover:bg-white/10" data-tab="hafalan"><i class="fas fa-award w-6 text-center"></i> <span>Setor Hafalan</span></a>
             
-            <div class="mt-8 mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sistem</div>
+            <div class="mt-6 mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Laporan</div>
+            <a href="#" onclick="switchTab('laporan')" class="nav-link block p-3 rounded-lg flex items-center transition-colors text-gray-400 hover:text-white hover:bg-white/10" data-tab="laporan"><i class="fas fa-file-invoice w-6 text-center"></i> <span>Laporan & Raport</span></a>
+
+            <div class="mt-6 mb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Sistem</div>
             <a href="#" onclick="switchTab('pengaturan')" class="nav-link block p-3 rounded-lg flex items-center transition-colors text-gray-400 hover:text-white hover:bg-white/10" data-tab="pengaturan"><i class="fas fa-cog w-6 text-center"></i> <span>Pengaturan</span></a>
         </nav>
     </aside>
@@ -78,8 +90,11 @@
                 <h1 class="font-bold text-lg md:text-xl text-dark" id="headerLembagaName">SANTRI Mujahid Al-Qomariyah</h1>
             </div>
             <div class="flex items-center gap-2 md:gap-4">
+                <button onclick="fetchFromGoogleSheets()" id="btnFetchHeader" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium flex items-center shadow-sm border border-emerald-200 transition-colors hidden md:flex">
+                    <i class="fas fa-cloud-download-alt mr-2"></i> Tarik Data
+                </button>
                 <button onclick="syncToGoogleSheets()" id="btnSyncHeader" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium flex items-center shadow-sm border border-blue-200 transition-colors hidden md:flex">
-                    <i class="fas fa-cloud-upload-alt mr-2"></i> Sync Data
+                    <i class="fas fa-cloud-upload-alt mr-2"></i> Simpan Data
                 </button>
                 <div class="bg-emerald-50 text-primary px-3 py-1.5 rounded-full text-xs md:text-sm font-medium flex items-center shadow-sm border border-emerald-100">
                     <i class="fas fa-circle text-[8px] mr-2 animate-pulse"></i> Sesi Aktif
@@ -93,9 +108,14 @@
             <div id="tab_dashboard" class="tab-content active">
                 <div class="flex justify-between items-center mb-2">
                     <h2 class="text-2xl font-bold text-dark">Selamat Datang!</h2>
-                    <button onclick="syncToGoogleSheets()" id="btnSyncMobile" class="md:hidden bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center">
-                        <i class="fas fa-sync-alt mr-2"></i> Sync
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="fetchFromGoogleSheets()" id="btnFetchMobile" class="md:hidden bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center">
+                            <i class="fas fa-cloud-download-alt mr-2"></i> Tarik
+                        </button>
+                        <button onclick="syncToGoogleSheets()" id="btnSyncMobile" class="md:hidden bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center">
+                            <i class="fas fa-cloud-upload-alt mr-2"></i> Simpan
+                        </button>
+                    </div>
                 </div>
                 <p class="text-gray-500 mb-8">Sistem Informasi & Absensi Terpadu Pondok Pesantren.</p>
                 
@@ -272,6 +292,66 @@
                 </div>
             </div>
 
+            <!-- TAB LAPORAN & RAPORT -->
+            <div id="tab_laporan" class="tab-content">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <h2 class="text-2xl font-bold text-dark">Laporan & Raport Bulanan</h2>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Fitur Cetak Raport -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 border-t-4 border-t-blue-500">
+                            <h3 class="font-bold text-lg mb-2"><i class="fas fa-print text-blue-500 mr-2"></i>Cetak Raport Santri</h3>
+                            <p class="text-xs text-gray-500 mb-5">Hasilkan laporan resmi (raport) per santri untuk dicetak / diekspor ke PDF.</p>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Bulan & Tahun</label>
+                                    <input type="month" id="raport_bulan" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Santri</label>
+                                    <select id="raport_santri" class="w-full border rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none" required></select>
+                                </div>
+                                <button onclick="generateRaport()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold shadow-md transition-colors flex items-center justify-center gap-2">
+                                    <i class="fas fa-file-pdf"></i> Tampilkan Raport
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rekapitulasi Tabel Bulanan -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
+                            <div class="p-4 border-b bg-gray-50 flex justify-between items-center flex-wrap gap-3">
+                                <h3 class="font-bold text-dark"><i class="fas fa-table text-emerald-500 mr-2"></i>Rekapitulasi Santri</h3>
+                                <div class="flex items-center gap-2">
+                                    <label class="text-sm text-gray-600">Bulan:</label>
+                                    <input type="month" id="rekap_bulan_filter" onchange="generateRekapBulananTabel()" class="border rounded-md px-2 py-1 text-sm focus:outline-none focus:border-emerald-500">
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto flex-1">
+                                <table class="w-full text-left text-sm">
+                                    <thead>
+                                        <tr class="bg-emerald-50/50 text-gray-600 uppercase text-xs border-b">
+                                            <th class="p-3 font-semibold w-10 text-center">No</th>
+                                            <th class="p-3 font-semibold">Nama Santri</th>
+                                            <th class="p-3 font-semibold text-center" title="Kehadiran Subuh">Hadir Subuh</th>
+                                            <th class="p-3 font-semibold text-center" title="Kehadiran Maghrib">Hadir Maghrib</th>
+                                            <th class="p-3 font-semibold text-center" title="Total Setoran Hafalan Bulan Ini">Total Setoran</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableRekapBulanan" class="divide-y divide-gray-100">
+                                        <!-- Data will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- TAB PENGATURAN -->
             <div id="tab_pengaturan" class="tab-content">
                 <h2 class="text-2xl font-bold text-dark mb-6">Pengaturan Sistem</h2>
@@ -310,8 +390,11 @@
                         </div>
                         <div class="flex gap-2">
                             <button onclick="saveGasUrl()" class="flex-1 bg-gray-800 text-white py-2 rounded-lg font-medium hover:bg-black transition-colors shadow-md text-sm">Simpan URL</button>
+                            <button onclick="fetchFromGoogleSheets()" class="flex-1 bg-emerald-600 text-white py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors shadow-md text-sm flex items-center justify-center">
+                                <i class="fas fa-cloud-download-alt mr-2"></i> Tarik Data
+                            </button>
                             <button onclick="syncToGoogleSheets()" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md text-sm flex items-center justify-center">
-                                <i class="fas fa-sync-alt mr-2"></i> Sync Data
+                                <i class="fas fa-cloud-upload-alt mr-2"></i> Simpan Data
                             </button>
                         </div>
                     </div>
@@ -328,7 +411,7 @@
         </div>
     </main>
 
-    <!-- Modals & Toasts (Sama seperti sebelumnya) -->
+    <!-- Modals & Toasts -->
     <div id="qrModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-xs text-center transform transition-all scale-95" id="qrModalContent">
             <h3 class="font-bold text-lg mb-1" id="qrModalTitle">ID</h3><p class="text-sm text-gray-500 mb-4" id="qrModalSubtitle">Nama</p>
@@ -366,6 +449,84 @@
         </div>
     </div>
 
+    <!-- Raport Modal (Print Area) -->
+    <div id="raportModal" class="fixed inset-0 bg-slate-900/80 z-50 hidden overflow-y-auto pt-10 pb-10 flex justify-center backdrop-blur-sm">
+        <div class="absolute top-4 right-6 flex gap-3 no-print fixed z-50">
+            <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-lg flex items-center"><i class="fas fa-print mr-2"></i> Cetak (PDF)</button>
+            <button onclick="closeRaportModal()" class="bg-white hover:bg-gray-100 text-gray-800 px-4 py-2.5 rounded-lg font-bold shadow-lg"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <!-- Kertas A4 Raport -->
+        <div id="raportPrintArea" class="bg-white w-full max-w-[210mm] min-h-[297mm] p-[10mm] md:p-[20mm] shadow-2xl relative">
+            <!-- Header/Kop Surat -->
+            <div class="border-b-4 border-double border-gray-800 pb-4 mb-6 flex items-center justify-between">
+                <div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white text-3xl shrink-0" id="raportLogoContainer"><i class="fas fa-mosque"></i></div>
+                <div class="text-center flex-1 px-4">
+                    <h1 class="text-2xl font-bold uppercase tracking-wider text-dark mb-1" id="raportHeaderLembaga">SANTRI MUJAHID AL-QOMARIYAH</h1>
+                    <p class="text-sm text-gray-600">Laporan Perkembangan Hafalan dan Kehadiran Santri</p>
+                </div>
+            </div>
+            
+            <div class="text-center mb-8">
+                <h2 class="text-xl font-bold text-gray-800 uppercase underline mb-1">RAPORT BULANAN</h2>
+                <p class="text-sm text-gray-600 font-medium" id="raportPeriode">Periode: Oktober 2023</p>
+            </div>
+
+            <!-- Identitas Santri -->
+            <table class="w-full text-sm font-medium text-gray-800 mb-8">
+                <tr><td class="w-32 py-1">Nama Santri</td><td class="w-4">:</td><td class="font-bold text-lg border-b border-gray-300" id="rap_nama">Ahmad</td></tr>
+                <tr><td class="py-1">Nomor Induk / ID</td><td>:</td><td id="rap_id">SMQ-1234</td></tr>
+                <tr><td class="py-1">Kelas / Tingkat</td><td>:</td><td id="rap_kelas">Ula</td></tr>
+            </table>
+
+            <!-- Rekap Absensi -->
+            <h3 class="font-bold text-dark border-b border-gray-300 mb-3"><i class="fas fa-clipboard-check mr-2"></i>A. REKAPITULASI KEHADIRAN</h3>
+            <table class="w-full text-sm border-collapse border border-gray-300 mb-8">
+                <tr class="bg-gray-100 text-center font-bold">
+                    <td class="border border-gray-300 py-2 w-1/2">Hadir Subuh (Pagi)</td>
+                    <td class="border border-gray-300 py-2 w-1/2">Hadir Maghrib (Malam)</td>
+                </tr>
+                <tr class="text-center text-lg font-bold text-primary">
+                    <td class="border border-gray-300 py-4" id="rap_absen_subuh">0 Hari</td>
+                    <td class="border border-gray-300 py-4" id="rap_absen_maghrib">0 Hari</td>
+                </tr>
+            </table>
+
+            <!-- Detail Hafalan -->
+            <h3 class="font-bold text-dark border-b border-gray-300 mb-3"><i class="fas fa-book-open mr-2"></i>B. CATATAN SETORAN HAFALAN</h3>
+            <table class="w-full text-sm border-collapse border border-gray-300 mb-10">
+                <thead>
+                    <tr class="bg-gray-100 font-bold text-center">
+                        <td class="border border-gray-300 py-2 px-3 w-20">Tanggal</td>
+                        <td class="border border-gray-300 py-2 px-3 w-24">Kategori</td>
+                        <td class="border border-gray-300 py-2 px-3">Capaian / Materi</td>
+                        <td class="border border-gray-300 py-2 px-3 w-32">Nilai</td>
+                    </tr>
+                </thead>
+                <tbody id="rap_table_hafalan">
+                    <!-- populated by js -->
+                </tbody>
+            </table>
+
+            <!-- Tanda Tangan -->
+            <div class="flex justify-between mt-12 pt-8 text-sm">
+                <div class="text-center">
+                    <p class="mb-16 text-gray-700">Mengetahui,<br>Orang Tua / Wali Santri</p>
+                    <p class="font-bold border-b border-gray-800 px-4 inline-block">( ..................................... )</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-gray-700 mb-1" id="rap_tgl_ttd">Ditetapkan di: .........., 15 Okt 2023</p>
+                    <p class="mb-12 text-gray-700">Pengurus / Wali Kelas</p>
+                    <p class="font-bold border-b border-gray-800 px-4 inline-block">( ..................................... )</p>
+                </div>
+            </div>
+            
+            <div class="absolute bottom-4 left-0 w-full text-center text-[10px] text-gray-400 no-print">
+                Generated by Sistem Absensi SIPONTREN
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="fixed bottom-4 right-4 bg-white border border-gray-100 shadow-xl rounded-lg p-4 flex items-start gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50 w-80">
         <div id="toastIcon" class="w-8 h-8 rounded-full flex items-center justify-center shrink-0"></div>
         <div><h4 id="toastTitle" class="font-bold text-sm text-gray-800">Title</h4><p id="toastMessage" class="text-xs text-gray-500 mt-1">Message</p></div>
@@ -400,8 +561,12 @@
             document.querySelectorAll('.tab-content').forEach(el => { el.classList.remove('active'); setTimeout(() => el.style.display = 'none', 50); });
             document.querySelectorAll('.nav-link').forEach(el => { el.classList.remove('bg-primary', 'text-white', 'active'); el.classList.add('text-gray-400'); });
             setTimeout(() => { document.getElementById('tab_' + tabId).style.display = 'block'; setTimeout(() => document.getElementById('tab_' + tabId).classList.add('active'), 10); }, 50);
-            document.querySelector(`.nav-link[data-tab="${tabId}"]`).classList.add('bg-primary', 'text-white', 'active');
-            document.querySelector(`.nav-link[data-tab="${tabId}"]`).classList.remove('text-gray-400');
+            const activeLink = document.querySelector(`.nav-link[data-tab="${tabId}"]`);
+            if(activeLink) {
+                activeLink.classList.add('bg-primary', 'text-white', 'active');
+                activeLink.classList.remove('text-gray-400');
+            }
+            if(tabId === 'laporan') updateLaporanDropdowns();
             if(window.innerWidth < 768) toggleSidebar();
         }
 
@@ -453,66 +618,19 @@
         function updateTabelJadwal() {
             const tbody = document.getElementById('tableJadwal'); tbody.innerHTML = '';
             db.jadwal.forEach(j => {
-                tbody.innerHTML += `<tr>
-                    <td class="p-4 font-semibold text-dark whitespace-nowrap">${j.waktu}</td>
-                    <td class="p-4 font-medium">${j.kegiatan}</td>
-                    <td class="p-4 text-gray-500 text-xs md:text-sm">${j.keterangan || '-'}</td>
-                    <td class="p-4 text-center whitespace-nowrap">
-                        <button onclick="editJadwal('${j.id}')" class="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="Edit"><i class="fas fa-edit"></i></button>
-                        <button onclick="hapusJadwal('${j.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors ml-1" title="Hapus"><i class="fas fa-trash-alt"></i></button>
-                    </td>
-                </tr>`;
+                tbody.innerHTML += `<tr><td class="p-4 font-semibold text-dark whitespace-nowrap">${j.waktu}</td><td class="p-4 font-medium">${j.kegiatan}</td><td class="p-4 text-gray-500 text-xs md:text-sm">${j.keterangan || '-'}</td><td class="p-4 text-center whitespace-nowrap"><button onclick="editJadwal('${j.id}')" class="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="Edit"><i class="fas fa-edit"></i></button><button onclick="hapusJadwal('${j.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors ml-1" title="Hapus"><i class="fas fa-trash-alt"></i></button></td></tr>`;
             });
         }
 
         function simpanJadwal(e) {
-            e.preventDefault();
-            const id = document.getElementById('j_id').value;
-            const waktu = document.getElementById('j_waktu').value;
-            const kegiatan = document.getElementById('j_kegiatan').value;
-            const keterangan = document.getElementById('j_keterangan').value;
-
-            if (id) {
-                const index = db.jadwal.findIndex(j => j.id === id);
-                if (index > -1) { db.jadwal[index] = { id, waktu, kegiatan, keterangan }; }
-                showToast('Diperbarui', 'Jadwal berhasil diupdate');
-            } else {
-                db.jadwal.push({ id: 'jdw_' + Date.now(), waktu, kegiatan, keterangan });
-                showToast('Ditambahkan', 'Jadwal baru tersimpan');
-            }
+            e.preventDefault(); const id = document.getElementById('j_id').value; const waktu = document.getElementById('j_waktu').value; const kegiatan = document.getElementById('j_kegiatan').value; const keterangan = document.getElementById('j_keterangan').value;
+            if (id) { const index = db.jadwal.findIndex(j => j.id === id); if (index > -1) { db.jadwal[index] = { id, waktu, kegiatan, keterangan }; } showToast('Diperbarui', 'Jadwal berhasil diupdate'); } else { db.jadwal.push({ id: 'jdw_' + Date.now(), waktu, kegiatan, keterangan }); showToast('Ditambahkan', 'Jadwal baru tersimpan'); }
             saveDb(); updateTabelJadwal(); batalEditJadwal();
         }
 
-        function editJadwal(id) {
-            const j = db.jadwal.find(x => x.id === id);
-            if(j) {
-                document.getElementById('j_id').value = j.id;
-                document.getElementById('j_waktu').value = j.waktu;
-                document.getElementById('j_kegiatan').value = j.kegiatan;
-                document.getElementById('j_keterangan').value = j.keterangan;
-                document.getElementById('formJadwalTitle').innerText = 'Edit Jadwal';
-                document.getElementById('btnSimpanJadwal').innerText = 'Update Data';
-                document.getElementById('btnBatalJadwal').classList.remove('hidden');
-                
-                // Scroll ke form jika di mobile
-                if(window.innerWidth < 1024) { document.getElementById('formJadwalTitle').scrollIntoView({behavior: 'smooth'}); }
-            }
-        }
-
-        function batalEditJadwal() {
-            document.getElementById('formJadwal').reset();
-            document.getElementById('j_id').value = '';
-            document.getElementById('formJadwalTitle').innerText = 'Tambah Jadwal Baru';
-            document.getElementById('btnSimpanJadwal').innerText = 'Simpan';
-            document.getElementById('btnBatalJadwal').classList.add('hidden');
-        }
-
-        function hapusJadwal(id) {
-            if(confirm('Yakin ingin menghapus jadwal ini?')) {
-                db.jadwal = db.jadwal.filter(j => j.id !== id);
-                saveDb(); updateTabelJadwal(); showToast('Dihapus', 'Jadwal telah dihapus', 'wa');
-            }
-        }
+        function editJadwal(id) { const j = db.jadwal.find(x => x.id === id); if(j) { document.getElementById('j_id').value = j.id; document.getElementById('j_waktu').value = j.waktu; document.getElementById('j_kegiatan').value = j.kegiatan; document.getElementById('j_keterangan').value = j.keterangan; document.getElementById('formJadwalTitle').innerText = 'Edit Jadwal'; document.getElementById('btnSimpanJadwal').innerText = 'Update Data'; document.getElementById('btnBatalJadwal').classList.remove('hidden'); if(window.innerWidth < 1024) { document.getElementById('formJadwalTitle').scrollIntoView({behavior: 'smooth'}); } } }
+        function batalEditJadwal() { document.getElementById('formJadwal').reset(); document.getElementById('j_id').value = ''; document.getElementById('formJadwalTitle').innerText = 'Tambah Jadwal Baru'; document.getElementById('btnSimpanJadwal').innerText = 'Simpan'; document.getElementById('btnBatalJadwal').classList.add('hidden'); }
+        function hapusJadwal(id) { if(confirm('Yakin ingin menghapus jadwal ini?')) { db.jadwal = db.jadwal.filter(j => j.id !== id); saveDb(); updateTabelJadwal(); showToast('Dihapus', 'Jadwal telah dihapus', 'wa'); } }
 
         function updateTabelAbsensi() {
             const tbody = document.getElementById('tableAbsensi'); tbody.innerHTML = '';
@@ -543,7 +661,7 @@
         function simpanHafalan(e) {
             e.preventDefault(); const s = db.santri.find(x => x.id === document.getElementById('h_santri').value); const kat = document.getElementById('h_kategori').value;
             let cap = "", jml = 0;
-            if(kat === "Al-Qur'an") { cap = `Juz ${document.getElementById('h_juz').value}, Surah ${document.getElementById('h_surat').value} ${document.getElementById('h_ayat').value ? 'Ayat '+document.getElementById('h_ayat').value : ''}`; jml = parseInt(document.getElementById('h_jumlah_quran').value) || 0; } 
+            if(kat === "Al-Qur'an") { cap = `Juz ${document.getElementById('h_juz').value}, Surat ${document.getElementById('h_surat').value} ${document.getElementById('h_ayat').value ? 'Ayat '+document.getElementById('h_ayat').value : ''}`; jml = parseInt(document.getElementById('h_jumlah_quran').value) || 0; } 
             else { cap = document.getElementById('h_judul').value; jml = parseInt(document.getElementById('h_jumlah_non').value) || 0; }
             db.hafalan.push({ idHaf: 'hf_' + Date.now(), waktu: new Date().toISOString(), idSantri: s.id, namaSantri: s.nama, kategori: kat, capaian: cap, jumlah: jml, nilai: document.getElementById('h_nilai').value, penyimak: document.getElementById('h_penyimak').value });
             saveDb(); updateTabelHafalan(); updateRekapHafalan(); showToast('Tersimpan', 'Setoran hafalan dicatat', 'success');
@@ -583,6 +701,131 @@
             });
         }
 
+        // --- LAPORAN & RAPORT LOGIC ---
+        function updateLaporanDropdowns() {
+            // Set default month to current month
+            const now = new Date();
+            const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            
+            const rekapBulan = document.getElementById('rekap_bulan_filter');
+            const raportBulan = document.getElementById('raport_bulan');
+            if(!rekapBulan.value) rekapBulan.value = currentMonth;
+            if(!raportBulan.value) raportBulan.value = currentMonth;
+
+            // Populate Santri select
+            const raportSantri = document.getElementById('raport_santri');
+            raportSantri.innerHTML = '<option value="">-- Pilih Santri --</option>';
+            db.santri.forEach(s => {
+                raportSantri.innerHTML += `<option value="${s.id}">${s.nama} (${s.kelas})</option>`;
+            });
+
+            generateRekapBulananTabel();
+        }
+
+        function generateRekapBulananTabel() {
+            const monthVal = document.getElementById('rekap_bulan_filter').value; // Format: YYYY-MM
+            if(!monthVal) return;
+
+            const tbody = document.getElementById('tableRekapBulanan');
+            tbody.innerHTML = '';
+
+            if(db.santri.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">Belum ada data santri.</td></tr>';
+                return;
+            }
+
+            db.santri.forEach((s, index) => {
+                // Filter absensi by santri and month
+                const absenBulanIni = db.absensi.filter(a => a.idSantri === s.id && a.waktu.startsWith(monthVal));
+                const hadirSubuh = absenBulanIni.filter(a => a.sesi === 'Subuh').length;
+                const hadirMaghrib = absenBulanIni.filter(a => a.sesi === 'Maghrib').length;
+
+                // Filter hafalan
+                const hafalanBulanIni = db.hafalan.filter(h => h.idSantri === s.id && h.waktu.startsWith(monthVal));
+                const totalSetoran = hafalanBulanIni.length;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="p-3 text-center text-gray-500">${index + 1}</td>
+                        <td class="p-3 font-medium text-dark">${s.nama}</td>
+                        <td class="p-3 text-center"><span class="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-md text-xs font-bold border border-emerald-100">${hadirSubuh} Hari</span></td>
+                        <td class="p-3 text-center"><span class="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-bold border border-blue-100">${hadirMaghrib} Hari</span></td>
+                        <td class="p-3 text-center"><span class="bg-purple-50 text-purple-700 px-2 py-1 rounded-md text-xs font-bold border border-purple-100">${totalSetoran} Kali</span></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function generateRaport() {
+            const idSantri = document.getElementById('raport_santri').value;
+            const monthVal = document.getElementById('raport_bulan').value; // YYYY-MM
+
+            if(!idSantri) return showToast('Peringatan', 'Pilih santri terlebih dahulu!', 'error');
+            if(!monthVal) return showToast('Peringatan', 'Pilih bulan & tahun!', 'error');
+
+            const santri = db.santri.find(s => s.id === idSantri);
+            if(!santri) return;
+
+            // Header Instansi
+            document.getElementById('raportHeaderLembaga').innerText = db.settings.namaLembaga;
+            let logoHtml = `<i class="fas fa-mosque"></i>`;
+            const headerLC = document.getElementById('raportLogoContainer');
+            if(db.settings.tipeLogo === 'url' && db.settings.urlLogo.trim() !== '') {
+                logoHtml = `<img src="${db.settings.urlLogo}" class="w-full h-full object-cover rounded-full">`;
+                headerLC.classList.remove('bg-primary', 'text-white'); headerLC.classList.add('bg-white', 'border-2', 'border-primary');
+            } else {
+                headerLC.classList.add('bg-primary', 'text-white'); headerLC.classList.remove('bg-white', 'border-2', 'border-primary');
+            }
+            headerLC.innerHTML = logoHtml;
+
+            // Format Month Name
+            const dateObj = new Date(monthVal + "-01");
+            const monthName = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+            document.getElementById('raportPeriode').innerText = `Periode: ${monthName.toUpperCase()}`;
+            
+            // Set Identitas Santri
+            document.getElementById('rap_nama').innerText = santri.nama;
+            document.getElementById('rap_id').innerText = santri.id;
+            document.getElementById('rap_kelas').innerText = santri.kelas;
+
+            // Hitung Absensi
+            const absenBulanIni = db.absensi.filter(a => a.idSantri === santri.id && a.waktu.startsWith(monthVal));
+            document.getElementById('rap_absen_subuh').innerText = `${absenBulanIni.filter(a => a.sesi === 'Subuh').length} Hari`;
+            document.getElementById('rap_absen_maghrib').innerText = `${absenBulanIni.filter(a => a.sesi === 'Maghrib').length} Hari`;
+
+            // Buat List Hafalan
+            const hafalanBulanIni = db.hafalan.filter(h => h.idSantri === santri.id && h.waktu.startsWith(monthVal));
+            const tbHafalan = document.getElementById('rap_table_hafalan');
+            tbHafalan.innerHTML = '';
+            
+            if(hafalanBulanIni.length === 0) {
+                tbHafalan.innerHTML = `<tr><td colspan="4" class="border border-gray-300 py-4 text-center text-gray-500 italic">Belum ada catatan setoran pada bulan ini.</td></tr>`;
+            } else {
+                hafalanBulanIni.sort((a,b) => new Date(a.waktu) - new Date(b.waktu)).forEach(h => {
+                    const tgl = new Date(h.waktu).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+                    const nilaiMurni = h.nilai.split(' (')[0];
+                    tbHafalan.innerHTML += `
+                        <tr class="text-center hover:bg-gray-50">
+                            <td class="border border-gray-300 py-1.5 px-3">${tgl}</td>
+                            <td class="border border-gray-300 py-1.5 px-3 text-xs font-medium">${h.kategori}</td>
+                            <td class="border border-gray-300 py-1.5 px-3 text-left">${h.capaian}</td>
+                            <td class="border border-gray-300 py-1.5 px-3 font-bold text-primary">${nilaiMurni}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Tanggal TTD
+            document.getElementById('rap_tgl_ttd').innerText = `Ditetapkan pada: ${new Date().toLocaleDateString('id-ID', {day: 'numeric', month: 'long', year: 'numeric'})}`;
+
+            // Tampilkan Modal
+            document.getElementById('raportModal').classList.remove('hidden');
+        }
+
+        function closeRaportModal() {
+            document.getElementById('raportModal').classList.add('hidden');
+        }
+
         function toggleLogoInput() { document.getElementById('logoUrlContainer').classList.toggle('hidden', document.getElementById('setting_tipe_logo').value !== 'url'); }
         
         function savePengaturanLembaga(e) {
@@ -616,6 +859,50 @@
         function clearAllData() { if(confirm("PERHATIAN!\n\nAnda yakin ingin menghapus SEMUA data lokal?")) { localStorage.clear(); location.reload(); } }
 
         // --- GOOGLE SHEETS SYNC LOGIC ---
+        async function fetchFromGoogleSheets() {
+            if(!db.settings.gasUrl) {
+                switchTab('pengaturan');
+                return showToast('Gagal Tarik', 'Isi URL Web App Google Apps Script terlebih dahulu di menu Pengaturan!', 'error');
+            }
+
+            const btnMobile = document.getElementById('btnFetchMobile');
+            const btnHeader = document.getElementById('btnFetchHeader');
+            let oriHtmlM = '';
+            if(btnMobile) { oriHtmlM = btnMobile.innerHTML; btnMobile.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+            const oriHtmlH = btnHeader.innerHTML;
+            btnHeader.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Menarik Data...';
+
+            try {
+                const payload = JSON.stringify({ action: 'fetch' });
+                const response = await fetch(db.settings.gasUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: payload
+                });
+                
+                const result = await response.json();
+                if(result.status === 'success' && result.data) {
+                    // Update DB lokal dengan data dari Cloud (kecuali setting)
+                    db.santri = result.data.santri || [];
+                    db.absensi = result.data.absensi || [];
+                    db.hafalan = result.data.hafalan || [];
+                    db.jadwal = result.data.jadwal || [];
+                    
+                    saveDb(); // Simpan ke local storage
+                    init();   // Render ulang seluruh tabel/tampilan
+                    showToast('Sukses', 'Data terbaru berhasil ditarik dari Spreadsheet!', 'success');
+                } else {
+                    throw new Error(result.message || 'Format data tidak valid');
+                }
+            } catch(error) {
+                console.error(error);
+                showToast('Gagal Tarik', 'Terjadi kesalahan. Pastikan Google Apps Script sudah di-update sesuai panduan terbaru!', 'error');
+            } finally {
+                if(btnMobile) btnMobile.innerHTML = oriHtmlM;
+                btnHeader.innerHTML = oriHtmlH;
+            }
+        }
+
         async function syncToGoogleSheets() {
             if(!db.settings.gasUrl) {
                 switchTab('pengaturan');
@@ -630,12 +917,11 @@
             btnHeader.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Menyinkronkan...';
 
             try {
-                // Mengirim seluruh state db lokal ke server Google Sheets untuk ditimpa/update
                 const payload = JSON.stringify({ action: 'sync', data: db });
                 
                 await fetch(db.settings.gasUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Menggunakan text/plain untuk menghindari issue CORS preflight di GAS
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: payload
                 });
 
